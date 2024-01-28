@@ -5,6 +5,7 @@ import urllib.parse
 import pathlib
 import json
 import datetime
+import socket
 
 
 class WebDodatok_HT4(BaseHTTPRequestHandler):

@@ -35,6 +35,7 @@ class WebDodatok_HT4(BaseHTTPRequestHandler):
         with open("c:/Users/IJHEA/Documents/Python/home_task_4/front-init/index.html", 'rb') as file:
             self.wfile.write(file.read())
         
+        
     def send_html_file_1(self, file, status=200):
         self.send_response(status)
         self.send_header('Content-type', 'text/html')
@@ -63,13 +64,10 @@ class WebDodatok_HT4(BaseHTTPRequestHandler):
         
 def save_data_from_form(data):
     data_dict_1 = {}  
-    data_parse = urllib.parse.unquote_plus(data.decode())
-    
-    data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
-   
+    data_parse = urllib.parse.unquote_plus(data.decode())    
+    data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}   
     with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'r') as fil:
-        data_dict_1 = json.load(fil)            
-              
+        data_dict_1 = json.load(fil)                          
     data_dict_1.update({str(datetime.datetime.now()): data_dict})
     with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'w', encoding='utf-8') as fil:
         json.dump(data_dict_1, fil)
@@ -77,15 +75,13 @@ def save_data_from_form(data):
         
 def run_socket_server(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind((host, port))
-    
+    server_socket.bind((host, port))    
     logging.info('Starting socket server!')
     try:
         while True:
             msg, address = server_socket.recvfrom(BUFFER_SIZE)
             save_data_from_form(msg)
-            logging.info(f"Socket received {address}: {msg}")
-        
+            logging.info(f"Socket received {address}: {msg}")        
     except KeyboardInterrupt:
         server_socket.close()
     
@@ -101,10 +97,8 @@ def run_http_server(host, port):
         
         
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(threadName)s %(message)s')
-    
+    logging.basicConfig(level=logging.DEBUG, format='%(threadName)s %(message)s')    
     server = Thread(target=run_http_server, args=(HTTP_HOST, HTTP_PORT))
-    server.start()
-    
+    server.start()    
     server_socket = Thread(target=run_socket_server, args=(SOCKET_HOST, SOCKET_PORT))
     server_socket.start()

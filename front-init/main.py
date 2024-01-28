@@ -2,10 +2,19 @@
 import mimetypes
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.parse
-import pathlib
+from pathlib import Path
+import logging
 import json
 import datetime
 import socket
+from threading import Thread
+
+BASE_DIR = Path()
+BUFFER_SIZE = 1024
+HTTP_PORT = 3000
+SOCKET_PORT = 5000
+HTTP_HOST = 'localhost'
+SOCKET_HOST = "127.0.0.1"
 
 
 class WebDodatok_HT4(BaseHTTPRequestHandler):
@@ -42,36 +51,60 @@ class WebDodatok_HT4(BaseHTTPRequestHandler):
             self.wfile.write(file.read())
             
             
-    def do_POST(self):
-        data_dict_1 = {}           
-            
-        data = self.rfile.read(int(self.headers['Content-Length']))
-        
-        print(data)
-        data_parse = urllib.parse.unquote_plus(data.decode())
-        print(data_parse)
-        data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
-        print(data_dict)
-        with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'r') as fil:
-            data_dict_1 = json.load(fil)
-            
-        print(data_dict_1)    
-            
-        data_dict_1.update({str(datetime.datetime.now()): data_dict})
-        with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'w', encoding='utf-8') as fil:
-            json.dump(data_dict_1, fil)
+    def do_POST(self):                             
+        data = self.rfile.read(int(self.headers['Content-Length']))        
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client_socket.sendto(data, (SOCKET_HOST, SOCKET_PORT))
+        client_socket.close()
         self.send_response(302)
         self.send_header('Location', '/')
         self.end_headers()
+        
+        
+def save_data_from_form(data):
+    data_dict_1 = {}  
+    data_parse = urllib.parse.unquote_plus(data.decode())
     
-def run_server():
-    address = ('localhost', 3000)
+    data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
+   
+    with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'r') as fil:
+        data_dict_1 = json.load(fil)            
+              
+    data_dict_1.update({str(datetime.datetime.now()): data_dict})
+    with open('c:/Users/IJHEA/Documents/Python/home_task_4/front-init/storage/data.json', 'w', encoding='utf-8') as fil:
+        json.dump(data_dict_1, fil)
+        
+        
+def run_socket_server(host, port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind((host, port))
+    
+    logging.info('Starting socket server!')
+    try:
+        while True:
+            msg, address = server_socket.recvfrom(BUFFER_SIZE)
+            save_data_from_form(msg)
+            logging.info(f"Socket received {address}: {msg}")
+        
+    except KeyboardInterrupt:
+        server_socket.close()
+    
+    
+def run_http_server(host, port):
+    address = (host, port)
     http_server = HTTPServer(address, WebDodatok_HT4)
+    logging.info('Starting http server!')
     try:
         http_server.serve_forever()
     except KeyboardInterrupt:
         http_server.server_close()
         
+        
 if __name__ == '__main__':
-    run_server()
+    logging.basicConfig(level=logging.DEBUG, format='%(threadName)s %(message)s')
     
+    server = Thread(target=run_http_server, args=(HTTP_HOST, HTTP_PORT))
+    server.start()
+    
+    server_socket = Thread(target=run_socket_server, args=(SOCKET_HOST, SOCKET_PORT))
+    server_socket.start()
